@@ -12,8 +12,20 @@ def maya_main_window():
 long=False
 avoidRightSide = True
 
-# TODO: add multiple selection
 # TODO: in case multiple objects has the same name, list them before and / or rename them.
+# TODO: Checker les doublons, et avoir la possibilité d'outrepasser s'il y en a (et afficher le longname à la place du shortname)
+# TODO: détecter offset entre controler et objet contraint
+# TODO: détecter clés sur les groupes (pas plus de 2 clés)
+# TODO: détecter s'il y a eu un freeze transform (via comparaison entre local attributes, parent, et origine du world)
+# TODO: Détecter s'il y a des objets sont symétriques (en position, et en rotation)
+# TODO: Contraintes et clés sur le même objet (clés vertes)
+# TODO: Quelles sont les objets contraints par plusieurs controlers
+# TODO: Quels bones n'ont aucune contrainte
+# TODO: Pas de contraintes sur les controllers
+# TODO: (difficile) vérifier si la hiérarchie (sans les shapes, donc sans les dag nodes) correspond bien aux index des objets. Il faut pouvoir détecter qu'un bone nommé "blabla_04" ou "blabla4" est bien enfant d'un 3 ou 03.
+# TODO: Checker si les bones comportant le mot "end" et "root" influencent le skin
+# TODO: Détecter s'il y a plusieurs modifiers skin sur le même objet
+# TODO: Vérifier si on est en camelCase ou PascalCase ou SnakeCase (éviter par exemple d'avoir une majuscule après un underscore...)
 class MainWindow(QtWidgets.QMainWindow):
     def __init__(self, parent=None):
         super(MainWindow, self).__init__(parent)
@@ -42,11 +54,15 @@ class MainWindow(QtWidgets.QMainWindow):
         self.fit_to_table()
 
     def connect_buttons(self):
-        self.qlw_data.cellClicked.connect(self.select_obj)
+        self.qlw_data.itemSelectionChanged.connect(self.select_obj)
 
-    def select_obj(self, row, column):
-        boneName = self.qlw_data.item(row, 0).text()
-        cmds.select(boneName)
+    def select_obj(self):
+        selection = self.qlw_data.selectedItems()
+        # We only care about the items in the first column (Object names)
+        # itemSelectionChanged fires for any cell, so we filter for column 0
+        nodes = list(set([self.qlw_data.item(item.row(), 0).text() for item in selection]))
+        if nodes:
+            cmds.select(nodes)
 
     def fit_to_table(self):
         x = self.qlw_data.verticalHeader().size().width()
