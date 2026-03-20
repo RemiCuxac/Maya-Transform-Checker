@@ -11,7 +11,7 @@ def maya_main_window():
 
 long=False
 avoidRightSide = True
-
+ToolName = "Maya Transforms Checker"
 # TODO: in case multiple objects has the same name, list them before and / or rename them.
 # TODO: Checker les doublons, et avoir la possibilité d'outrepasser s'il y en a (et afficher le longname à la place du shortname)
 # TODO: détecter offset entre controler et objet contraint
@@ -31,7 +31,7 @@ class MainWindow(QtWidgets.QMainWindow):
         super(MainWindow, self).__init__(parent)
         self.setWindowFlags(QtCore.Qt.Tool)
 
-        self.setWindowTitle('Maya Transforms Checker')
+        self.setWindowTitle(ToolName)
         self.resize(300, 300)
         self.qlw_data = QtWidgets.QTableWidget()
         self.setCentralWidget(self.qlw_data)
@@ -105,7 +105,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
     @staticmethod
     def check_trs(pList, pDict, pTranslate: bool = True, pRotate: bool = True, pScale: bool = True,
-                  pJointOrient: bool = True, pAvoidTranslateX=False, pAvoidRightSide=False) -> dict:
+                  pJointOrient: bool = True, pAvoidRightSide=False) -> dict:
         excludeListParent = ["hand", "hips", "pelvis", "meta"]
         excludeListObj = ["meta", "constraint", "clav", "eye", "jaw", "pelvis", "hips"]
         for obj in pList:
@@ -122,10 +122,10 @@ class MainWindow(QtWidgets.QMainWindow):
                         for axis in ["X", "Y", "Z"]:
                             if (trs =="Translate" and axis !="X") or trs !="Translate":  # avoid Translate X
                                 if trs == "Scale":
-                                    min, max = 0.99, 1.01
+                                    min_value, max_value = 0.99, 1.01
                                 else:
-                                    min, max = -0.01, 0.01
-                                if not min < cmds.getAttr(f"{obj}.{trs.lower()}{axis}") < max:
+                                    min_value, max_value = -0.01, 0.01
+                                if not min_value < cmds.getAttr(f"{obj}.{trs.lower()}{axis}") < max_value:
                                     if not pDict[obj] or not trs in pDict[obj]:
                                         pDict[obj].append(trs)
                 # for jointOrients
@@ -138,9 +138,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
 
 if __name__ == "__main__":
-    try:
-        mayaTrsChecker.deleteLater()
-    except:
-        pass
+    if cmds.window(ToolName, exists=True):
+        cmds.deleteUI(ToolName, window=True)
     mayaTrsChecker = MainWindow(parent=maya_main_window())
     mayaTrsChecker.show()
