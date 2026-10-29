@@ -1,4 +1,7 @@
-from PySide2 import QtWidgets, QtCore
+try:
+    from PySide2 import QtWidgets, QtCore
+except ModuleNotFoundError:
+    from PySide6 import QtWidgets, QtCore
 from shiboken2 import wrapInstance
 import maya.OpenMayaUI as omui
 import maya.cmds as cmds
