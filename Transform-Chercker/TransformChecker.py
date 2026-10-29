@@ -12,9 +12,11 @@ def maya_main_window():
     main_window_ptr = omui.MQtUtil.mainWindow()
     return wrapInstance(int(main_window_ptr), QtWidgets.QWidget)
 
-long=False
+
 avoidRightSide = True
 ToolName = "Maya Transforms Checker"
+
+
 # TODO: in case multiple objects has the same name, list them before and / or rename them.
 # TODO: Checker les doublons, et avoir la possibilite d'outrepasser s'il y en a (et afficher le longname a la place du shortname)
 # TODO: detecter offset entre controler et objet contraint
@@ -39,9 +41,9 @@ class MainWindow(QtWidgets.QMainWindow):
         self.qlw_data = QtWidgets.QTableWidget()
         self.setCentralWidget(self.qlw_data)
 
-        self.skel = cmds.ls(type="joint", long=long)
-        self.controls = [cmds.listRelatives(i, p=1, type="transform", fullPath=long)[0] for i in
-                         cmds.ls(type="nurbsCurve", o=1, r=1, ni=1, long=long)]
+        self.skel = cmds.ls(type="joint", long=True)
+        self.controls = [cmds.listRelatives(i, p=1, type="transform", fullPath=True)[0] for i in
+                         cmds.ls(type="nurbsCurve", o=1, r=1, ni=1, long=True)]
         self.dict_data = defaultdict(list)
 
         self.statusbar = QtWidgets.QStatusBar()
@@ -52,7 +54,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.update_table()
         self.update_list()
         self.qlw_data.setSizeAdjustPolicy(QtWidgets.QAbstractScrollArea.AdjustToContents)
-        #self.qlw_data.resizeColumnsToContents()
+        # self.qlw_data.resizeColumnsToContents()
         self.connect_buttons()
         self.fit_to_table()
 
@@ -76,7 +78,7 @@ class MainWindow(QtWidgets.QMainWindow):
         for i in range(self.qlw_data.rowCount()):
             y += self.qlw_data.rowHeight(i)
 
-        self.resize(x + 20, y+25)
+        self.resize(x + 20, y + 25)
 
     def update_table(self):
         self.qlw_data.setColumnCount(5)
@@ -99,11 +101,11 @@ class MainWindow(QtWidgets.QMainWindow):
             # bone name :
             itemBone = QtWidgets.QTableWidgetItem()
             self.qlw_data.setItem(i, 0, itemBone)
-            itemBone.setText(key)
+            itemBone.setText(key.split("|")[-1])
             for column, axis in enumerate(["Translate", "Rotate", "Scale", "JointOrient"]):
                 if axis in value:
                     item = QtWidgets.QTableWidgetItem()
-                    self.qlw_data.setItem(i, column+1, item)
+                    self.qlw_data.setItem(i, column + 1, item)
                     item.setText("Wrong")
 
     @staticmethod
@@ -112,18 +114,23 @@ class MainWindow(QtWidgets.QMainWindow):
         excludeListParent = ["hand", "hips", "pelvis", "meta"]
         excludeListObj = ["meta", "constraint", "clav", "eye", "jaw", "pelvis", "hips"]
         for obj in pList:
-            objParent = cmds.listRelatives(obj, parent=True, fullPath=long)
-            objParent = objParent[0] if objParent is not None else ""
+            short_name = obj.split("|")[-1]
+            if len(cmds.ls(short_name)) != 1:
+                cmds.warning(f"More than one object is named {short_name}")
+
+            objParent = cmds.listRelatives(obj, parent=True, fullPath=True)
+            objParent = objParent[0].split("|")[-1] if objParent is not None else ""
             if pAvoidRightSide:
                 excludeListObj.append("right")
             checkParentChain = [True for name in excludeListParent if name in objParent.lower()]
-            checkFistChain = [True for name in excludeListObj if name in obj.lower()]
+            checkFistChain = [True for name in excludeListObj if name in short_name.lower()]
             if (not any(checkParentChain)) and (not any(checkFistChain)):
                 # for Translate, Rotate, Scale :
                 for trs in ["Translate", "Rotate", "Scale"]:
-                    if (pTranslate and trs == "Translate") or (pRotate and trs == "Rotate") or (pScale and trs == "Scale"):
+                    if (pTranslate and trs == "Translate") or (pRotate and trs == "Rotate") or (
+                            pScale and trs == "Scale"):
                         for axis in ["X", "Y", "Z"]:
-                            if (trs =="Translate" and axis !="X") or trs !="Translate":  # avoid Translate X
+                            if (trs == "Translate" and axis != "X") or trs != "Translate":  # avoid Translate X
                                 if trs == "Scale":
                                     min_value, max_value = 0.99, 1.01
                                 else:
@@ -134,7 +141,8 @@ class MainWindow(QtWidgets.QMainWindow):
                 # for jointOrients
                 if pJointOrient:
                     if cmds.objectType(obj, isType="joint"):
-                        if sum([-0.01 < cmds.getAttr(f"{obj}.jointOrient{axis}") < 0.01 for axis in ["X", "Y", "Z"]]) <= 1:
+                        if sum([-0.01 < cmds.getAttr(f"{obj}.jointOrient{axis}") < 0.01 for axis in
+                                ["X", "Y", "Z"]]) <= 1:
                             if not pDict[obj] or not "JointOrient" in pDict[obj]:
                                 pDict[obj].append("JointOrient")
         return pDict
